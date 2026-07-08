@@ -1,5 +1,10 @@
 # Rust Cdev
 
+
+[![Status: Work in Progress](https://img.shields.io/badge/Status-Work%20in%20Progress-yellow)](https://img.shields.io/badge/Status-Work%20in%20Progress-yellow)
+
+> **Note:** This project is currently under active development. Expect changes and potential issues.
+
 Rust Cdev is aimed at being a proof-of-concept for developing character devices in rust for FreeBSD platforms. It is meant to be rough around the edges at the moment and will likely become a standalone library that can assist rust character device development in the future. Currently only 64 bit FreeBSD 15.0-RELEASE for the Raspberry Pi 3 - Model B is tested but more support is to come.
 
 ## Usage
