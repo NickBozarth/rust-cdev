@@ -28,16 +28,23 @@ pub mod c_types {
 
 
 pub mod c_structs {
-    use ::core::ffi::{c_int, c_char, c_uint};
+    use core::ffi::c_void;
+use ::core::ffi::{c_int, c_char, c_uint};
     use super::c_types::{c_size_t, c___uintptr_t};
-    use crate::cdev::Cdevsw;
+    use crate::{cdev::Cdevsw, types::c_types::{c_gid_t, c_uid_t}};
 
     #[repr(C)]
     pub struct MakeDevArgs {
         mda_size: c_size_t,
         mda_flags: c_int,
         mda_devsw: *mut Cdevsw,
-        // TODO stopping point
+        mda_cr: *mut Ucred,
+        mda_uid: c_uid_t,
+        mda_gid: c_gid_t,
+        mda_mode: c_int,
+        mda_uint: c_int,
+        mda_si_drv1: *mut c_void,
+        mda_si_drv2: *mut c_void,
     }
 
 

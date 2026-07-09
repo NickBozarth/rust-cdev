@@ -7,7 +7,9 @@
 use ::core::{
     cell::UnsafeCell,
     sync::atomic::{AtomicBool, Ordering},
-    ffi::{c_char, c_int}
+    ffi::{c_char, c_int},
+    ops::{Deref, DerefMut},
+    marker::PhantomData
 };
 
 use crate::{
@@ -25,11 +27,36 @@ pub enum MutexError {
 
 
 
-
+/*
+ * Negative impl being a feature forces the use of PhantomData to prevent send
+ * Some threads require that any mutexes opened must be closed by the same thread
+ */
 pub struct MutexGuard<'a, T> {
-    mutex: &'a Mutex<T>
+    mutex: &'a Mutex<T>,
+    _nosend_marker: PhantomData<*mut ()>
 }
 
+unsafe impl<T: Sync> Sync for MutexGuard<'_, T> {}
+
+impl<T> Deref for MutexGuard<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.mutex.data.get() }
+    }
+}
+
+impl<T> DerefMut for MutexGuard<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.mutex.data.get() }
+    }
+}
+
+impl<T> Drop for MutexGuard<'_, T> {
+    fn drop(&mut self) {
+        unsafe { mtx_unlock(self.mutex.c_mutex.get()); }
+    }
+}
 
 
 
@@ -86,12 +113,14 @@ impl<T> Mutex<T> {
     pub fn lock(&self) -> Result<MutexGuard<'_, T>, MutexError> {
         self.check_alive()?;
 
-        unsafe {
-            mtx_lock(self.c_mutex.get());
-        }
+        unsafe { mtx_lock(self.c_mutex.get()); }
 
-    
-        Ok(MutexGuard { mutex: self })
+        Ok(
+            MutexGuard { 
+                mutex: self, 
+                _nosend_marker: PhantomData 
+            }
+        )
     }
     pub fn replace() {}
     pub fn get() {}
@@ -104,13 +133,7 @@ impl<T> Mutex<T> {
 
     fn is_initialized(&self) -> bool {
         let is_initialized: c_int;
-        unsafe {
-            is_initialized = mtx_initialized(self.c_mutex.get());
-        }
-
-        /*
-         * non-zero value corresponds to an initialized mutex
-         */
+        unsafe { is_initialized = mtx_initialized(self.c_mutex.get()); }
         is_initialized != 0
     }
 

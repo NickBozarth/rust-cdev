@@ -1,7 +1,6 @@
 use ::core::ffi::{c_int, c_char};
 use crate::types::{
-    c_types::{c_uid_t, c_gid_t},
-    c_structs::{Cdev, Ucred, Mtx}
+    c_structs::{Cdev, MakeDevArgs, Mtx, Ucred}, c_types::{c_gid_t, c_uid_t}
 };
 use crate::cdev::Cdevsw;
 use crate::mutex::Mutex;
@@ -11,6 +10,9 @@ use crate::mutex::Mutex;
 
 
 unsafe extern "C" {
+    /*
+     * Userspace interaction
+     */
     pub fn uprintf(fmt: *const c_char, ...) -> c_int;
 
 
@@ -28,6 +30,13 @@ unsafe extern "C" {
         _fmt: *const c_char,
         ...
     ) -> c_int;
+
+    pub fn make_dev_s(
+        _args: *mut MakeDevArgs,
+        _cdev: *mut *mut Cdev,
+        _fmt: *const c_char,
+        ...
+    );
 
     pub fn destroy_dev(dev: *mut Cdev);
 

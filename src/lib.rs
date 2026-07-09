@@ -40,13 +40,10 @@ macro_rules! cstr_raw {
 
 
 
-unsafe extern "Rust" { 
-    pub static CDEVSW: Cdevsw;
-}
+pub static CDEVSW: Mutex<Option<Cdevsw>> = Mutex::new(None);
 
 pub static mut MAKE_DEV_ARGS: Option<MakeDevArgs> = None;
 
-pub static CDEV: Mutex<Cdevsw> = Mutex::new(Cdevsw::new(cstr!("rust_cdev")));
 
 
 static mut RUST_CDEV: *mut Cdev = ::core::ptr::null_mut();
