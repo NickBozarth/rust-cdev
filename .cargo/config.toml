@@ -1,6 +1,6 @@
 [target.aarch64-unknown-none]
 rustflags = [
     "-C", "target-feature=+bti",
-    "-C", "link-arg=-zbti-report=none", # Extra safety line for the Rust compiler stage
+    "-C", "link-arg=-zbti-report=none",
     "-C", "relocation-model=pic"
 ]

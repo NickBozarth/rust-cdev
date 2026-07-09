@@ -1,0 +1,83 @@
+#[allow(non_camel_case_types)]
+pub mod c_types {
+    use ::core::ffi::c_char;
+
+    pub type c_size_t = usize;
+    pub type c_uid_t = u32;
+    pub type c_gid_t = u32;
+    pub type c_caddr_t = *mut c_char;
+    pub type c_vm_ooffset_t = u64;
+    pub type c_vm_memattr_t = c_char;
+
+    #[cfg(target_pointer_width = "64")]
+    pub type c_vm_paddr_t = u64;
+    #[cfg(target_pointer_width = "32")]
+    pub type c_vm_paddr_t = u32;
+
+    #[cfg(target_pointer_width = "64")]
+    pub type c_vm_size_t = u64;
+    #[cfg(target_pointer_width = "32")]
+    pub type c_vm_size_t = u32;
+}
+
+
+
+pub mod c_structs {
+    use ::core::ffi::c_int;
+    use super::c_types::c_size_t;
+    use crate::cdev::Cdevsw;
+
+    #[repr(C)]
+    pub struct MakeDevArgs {
+        mda_size: c_size_t,
+        mda_flags: c_int,
+        mda_devsw: *mut Cdevsw,
+        // TODO stopping point
+    }
+
+
+    /*
+     * These should never be instantiated on by driver,
+     *  they must be passed as an argument from an extern
+     *  and should only be passed as a pointer
+     */
+    #[repr(C)]
+    pub struct Cdev     { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct Thread   { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct Uio      { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct Ucred    { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct CFile    { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct Bio      { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct Knote    { _private: [u8; 0] }
+    #[repr(C)]
+    pub struct VmObject { _private: [u8; 0] }
+
+    
+}
+
+pub mod d_functions {
+    use ::core::ffi::{c_int, c_ulong};
+    use super::{
+        c_structs::{Cdev, Thread, Uio, Knote, CFile, VmObject, Bio},
+        c_types::{c_caddr_t, c_vm_ooffset_t, c_vm_paddr_t, c_vm_memattr_t, c_vm_size_t}
+    };
+
+    pub type DOpenT         = unsafe extern "C" fn(dev: *mut Cdev, oflags: c_int, devtype: c_int, td: *mut Thread) -> c_int;
+    pub type DFdopenT       = unsafe extern "C" fn(dev: *mut Cdev, oflags: c_int, td: *mut Thread, fp: *mut CFile) -> c_int;
+    pub type DCloseT        = unsafe extern "C" fn(dev: *mut Cdev, fflag: c_int, devtype: c_int, td: *mut Thread) -> c_int;
+    pub type DReadT         = unsafe extern "C" fn(dev: *mut Cdev, uio: *mut Uio, ioflag: c_int) -> c_int;
+    pub type DWriteT        = unsafe extern "C" fn(dev: *mut Cdev, uio: *mut Uio, ioflag: c_int) -> c_int;
+    pub type DIoctlT        = unsafe extern "C" fn(dev: *mut Cdev, cmd: c_ulong, data: c_caddr_t, fflag: c_int, td: *mut Thread) -> c_int;
+    pub type DPollT         = unsafe extern "C" fn(dev: *mut Cdev, events: c_int, td: *mut Thread) -> c_int;
+    pub type DMmapT         = unsafe extern "C" fn(dev: *mut Cdev, offset: c_vm_ooffset_t, paddr: *mut c_vm_paddr_t, nprot: c_int, memattr: *mut c_vm_memattr_t) -> c_int;
+    pub type DStrategyT     = unsafe extern "C" fn(bp: *mut Bio) -> c_int;
+    pub type DKqfilterT     = unsafe extern "C" fn(dev: *mut Cdev, kn: *mut Knote) -> c_int;
+    pub type DPurgeT        = unsafe extern "C" fn(dev: *mut Cdev) -> c_int;
+    pub type DMmapSingleT   = unsafe extern "C" fn(cdev: *mut Cdev, offset: *mut c_vm_ooffset_t, size: c_vm_size_t, object: *mut *mut VmObject, nprot: c_int) -> c_int;
+}
