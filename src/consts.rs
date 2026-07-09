@@ -314,16 +314,73 @@ pub mod file_mode {
      */
     use ::core::ffi::c_int;
 
-    pub const ROOT_READ: c_int        = 0b100_000_000;
-    pub const ROOT_WRITE: c_int       = 0b010_000_000;
-    pub const ROOT_EXECUTE: c_int     = 0b001_000_000;
+    pub const ROOT_READ: c_int      = 0b100_000_000;
+    pub const ROOT_WRITE: c_int     = 0b010_000_000;
+    pub const ROOT_EXECUTE: c_int   = 0b001_000_000;
+    pub const ROOT_RW: c_int        = ROOT_READ  | ROOT_WRITE;
+    pub const ROOT_RX: c_int        = ROOT_READ  | ROOT_EXECUTE;
+    pub const ROOT_WX: c_int        = ROOT_WRITE | ROOT_EXECUTE;
+    pub const ROOT_RWX: c_int       = ROOT_READ  | ROOT_WRITE | ROOT_EXECUTE;
 
-    pub const GROUP_READ: c_int       = 0b000_100_000;
-    pub const GROUP_WRITE: c_int      = 0b000_010_000;
-    pub const GROUP_EXECUTE: c_int    = 0b000_001_000;
+    pub const GROUP_READ: c_int     = 0b000_100_000;
+    pub const GROUP_WRITE: c_int    = 0b000_010_000;
+    pub const GROUP_EXECUTE: c_int  = 0b000_001_000;
+    pub const GROUP_RW: c_int       = GROUP_READ  | GROUP_WRITE;
+    pub const GROUP_RX: c_int       = GROUP_READ  | GROUP_EXECUTE;
+    pub const GROUP_WX: c_int       = GROUP_WRITE | GROUP_EXECUTE;
+    pub const GROUP_RWX: c_int      = GROUP_READ  | GROUP_WRITE | GROUP_EXECUTE;
 
-    pub const USER_READ: c_int        = 0b000_000_100;
-    pub const USER_WRITE: c_int       = 0b000_000_010;
-    pub const USER_EXECUTE: c_int     = 0b000_000_001;
+    pub const USER_READ: c_int      = 0b000_000_100;
+    pub const USER_WRITE: c_int     = 0b000_000_010;
+    pub const USER_EXECUTE: c_int   = 0b000_000_001;
+    pub const USER_RW: c_int        = USER_READ  | USER_WRITE;
+    pub const USER_RX: c_int        = USER_READ  | USER_EXECUTE;
+    pub const USER_WX: c_int        = USER_WRITE | USER_EXECUTE;
+    pub const USER_RWX: c_int       = USER_READ  | USER_WRITE | USER_EXECUTE;
 }
 
+
+pub mod mutex {
+    /*
+     * <sys/mutex.h>
+     * ALL REFERENCES TO THESE IN C DOCUMENTATION REFER TO THEM WITH A MTX_ PREFIX
+     * DISREGARD THE init/option/state ABSTRACTION WHEN CHECKING DOCS
+     * ex: mutex::init::DEF -> MTX_DEF in docs
+     */
+    use ::core::ffi::c_int;
+
+    pub mod init {
+        use super::c_int;
+
+        pub const DEF: c_int        = 0x00000000;
+        pub const SPIN: c_int       = 0x00000001;
+        pub const RECURSE: c_int    = 0x00000004;
+        pub const NOWITNESS: c_int  = 0x00000008;
+        pub const NOPROFILE: c_int  = 0x00000020;
+        pub const NEW: c_int        = 0x00000040;
+
+        pub const QUIET: c_int      = 0x00000002;
+        pub const DUPOK: c_int      = 0x00000010;
+
+    }
+
+    /*
+     * These flags may be used for both init and option
+     */
+    pub mod option {
+        use super::{c_int, init};
+
+        pub const QUIET: c_int      = init::QUIET;
+        pub const DUPOK: c_int      = init::DUPOK;
+    }
+
+    pub mod state {
+        use super::c_int;
+
+        pub const UNOWNED: c_int    = 0x00000000;
+        pub const RECURSED: c_int   = 0x00000001;
+        pub const CONTESTED: c_int  = 0x00000002;
+        pub const DESTROYED: c_int  = 0x00000004;
+        pub const FLAGMASK: c_int   = RECURSED | CONTESTED | DESTROYED;
+    }
+}

@@ -18,13 +18,18 @@ pub mod c_types {
     pub type c_vm_size_t = u64;
     #[cfg(target_pointer_width = "32")]
     pub type c_vm_size_t = u32;
+
+    #[cfg(target_pointer_width = "64")]
+    pub type c___uintptr_t = u64;
+    #[cfg(target_pointer_width = "32")]
+    pub type c___uintptr_t = u32;
 }
 
 
 
 pub mod c_structs {
-    use ::core::ffi::c_int;
-    use super::c_types::c_size_t;
+    use ::core::ffi::{c_int, c_char, c_uint};
+    use super::c_types::{c_size_t, c___uintptr_t};
     use crate::cdev::Cdevsw;
 
     #[repr(C)]
@@ -33,6 +38,41 @@ pub mod c_structs {
         mda_flags: c_int,
         mda_devsw: *mut Cdevsw,
         // TODO stopping point
+    }
+
+
+    /*
+     * These are to be used internally for pub Mutex type and extern C functions
+     */
+    #[repr(C)]
+    struct LockObject {
+        pub lo_name:    *const c_char,
+        pub lo_flags:   c_uint,
+        pub lo_data:    c_uint,
+        pub lo_witness: *mut Witness
+    }
+    impl LockObject {
+        pub const fn new() -> Self {
+            Self {
+                lo_name:    ::core::ptr::null(),
+                lo_flags:   0,
+                lo_data:    0,
+                lo_witness: ::core::ptr::null_mut(),
+            }
+        }
+    }
+    #[repr(C)]
+    pub(crate) struct Mtx {
+        lock_object:    LockObject,
+        mtx_lock:       c___uintptr_t,
+    }
+    impl Mtx {
+        pub const fn new() -> Self {
+            Self {
+                lock_object:    LockObject::new(),
+                mtx_lock:       0x4,
+            }
+        }
     }
 
 
@@ -57,6 +97,8 @@ pub mod c_structs {
     pub struct Knote    { _private: [u8; 0] }
     #[repr(C)]
     pub struct VmObject { _private: [u8; 0] }
+    #[repr(C)]
+    struct Witness      { _private: [u8; 0] }
 
     
 }

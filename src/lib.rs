@@ -19,6 +19,9 @@ use cdev::Cdevsw;
 pub mod c_templates;
 use c_templates::*;
 
+pub mod mutex;
+use mutex::Mutex;
+
 
 #[macro_export]
 macro_rules! cstr {
@@ -43,7 +46,7 @@ unsafe extern "Rust" {
 
 pub static mut MAKE_DEV_ARGS: Option<MakeDevArgs> = None;
 
-
+pub static CDEV: Mutex<Cdevsw> = Mutex::new(Cdevsw::new(cstr!("rust_cdev")));
 
 
 static mut RUST_CDEV: *mut Cdev = ::core::ptr::null_mut();
