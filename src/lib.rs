@@ -1,11 +1,13 @@
 #![no_std]
 
+use core::{cell::OnceCell, ffi::c_char};
 use ::core::{
     ffi::{c_int, c_void},
     panic::PanicInfo
 };
 
 
+pub mod bti_note;
 
 pub mod types;
 use types::c_structs::*;
@@ -20,7 +22,6 @@ pub mod c_templates;
 use c_templates::*;
 
 pub mod mutex;
-use mutex::Mutex;
 
 
 #[macro_export]
@@ -39,61 +40,121 @@ macro_rules! cstr_raw {
 
 
 
+unsafe extern "Rust" {
+    pub fn init_dev(
+        cdevsw: &mut Cdevsw, 
+        make_dev_args: &mut MakeDevArgs, 
+        fmt: &mut *const c_char
+    );
+}
 
-pub static CDEVSW: Mutex<Option<Cdevsw>> = Mutex::new(None);
+static mut CDEV: *mut Cdev = ::core::ptr::null_mut();
 
-pub static mut MAKE_DEV_ARGS: Option<MakeDevArgs> = None;
-
-
-
-static mut RUST_CDEV: *mut Cdev = ::core::ptr::null_mut();
-
-
-
-static mut RUST_CDEVSW: Cdevsw = Cdevsw::new(cstr!("rust_cdev"));
 
 
 #[unsafe(no_mangle)]
 pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: *mut c_void) -> c_int {
-    unsafe {
-        match event {
-            0 => { // MOD_LOAD
-                let mut dev: *mut Cdev = ::core::ptr::null_mut();
+    match event {
+        modeventtype::LOAD  => {
+            if unsafe { !CDEV.is_null() } {
+                return error::EBUSY;
+            }
 
-                let error = make_dev_p(
-                    0,
-                    &mut dev,
-                    &raw mut RUST_CDEVSW,
-                    ::core::ptr::null_mut(),
-                    uid::ROOT,
-                    gid::WHEEL,
-                    file_mode::ROOT_READ | file_mode::ROOT_WRITE,
-                    cstr!("%s"),
-                    cstr!("rust_cdev")
+            let mut cdevsw: Cdevsw =                Cdevsw::new(::core::ptr::null());
+            let mut make_dev_args: MakeDevArgs =    MakeDevArgs::default();
+            let mut fmt: *const c_char =            ::core::ptr::null();
+            make_dev_args.mda_devsw =               &raw mut cdevsw;
+
+            unsafe { init_dev(&mut cdevsw, &mut make_dev_args, &mut fmt); }
+
+            if cdevsw.d_name.is_null() {
+                uprintf!(cstr!("Cdev modevent error: Cdevsw.d_name must not be null\n"));
+                return error::EIO;
+            }
+
+            let error: c_int;
+            let mut cdev_attempt: *mut Cdev = ::core::ptr::null_mut();
+            unsafe {
+                error = make_dev_s(
+                    &raw mut make_dev_args,
+                    &raw mut cdev_attempt,
+                    fmt,
                 );
+            }
 
-                match error {
-                    0 => {
-                        RUST_CDEV = dev;
-                        uprintf(cstr!("Created rust cdev\n"));
+            match error {
+                0 => {
+                    uprintf!(cstr!("Cdev modevent: Created device {}\n"), cdevsw.d_name);
+                    error::NOERR
+                }
+                _ => {
+                    uprintf!(cstr!("Cdev modevent error: Failed to create device {}\n"), error);
+                    error::EIO
+                }
+            }
+       },
+       modeventtype::UNLOAD => {
+            unsafe {
+                match CDEV.is_null() {
+                    true  => error::EIO,
+                    false => {
+                        destroy_dev(CDEV);
+                        uprintf(cstr!("Cdev modevent: destroyed dev\n"));
                         error::NOERR
                     },
-                    _ => {
-                        error::EIO
-                    }
                 }
-            },
-            1 => {
-                if !RUST_CDEV.is_null() {
-                    destroy_dev(RUST_CDEV);
-                    RUST_CDEV = ::core::ptr::null_mut();
-                }
-                uprintf(cstr!("Destroyed rust cdev\n"));
-                error::NOERR
-            },
-            _ => error::EOPNOTSUPP
-        }
-    }
+            }
+       },
+       _ => {
+            uprintf!(cstr!("Cdev modevent error: Event not defined\n"));
+            error::ENOTSUP
+       }
+    };
+
+    // unsafe {
+    //     match event {
+    //         0 => { // MOD_LOAD
+    //
+    //             init_dev(&CDEVSW, &MAKE_DEV_ARGS);
+    //             let mut dev: *mut Cdev = ::core::ptr::null_mut();
+    //
+    //             let error = make_dev_p(
+    //                 0,
+    //                 &mut dev,
+    //                 &raw mut RUST_CDEVSW,
+    //                 ::core::ptr::null_mut(),
+    //                 uid::ROOT,
+    //                 gid::WHEEL,
+    //                 file_mode::ROOT_READ | file_mode::ROOT_WRITE,
+    //                 cstr!("%s"),
+    //                 cstr!("rust_cdev")
+    //             );
+    //
+    //             match error {
+    //                 0 => {
+    //                     RUST_CDEV = dev;
+    //                     uprintf(cstr!("Created rust cdev\n"));
+    //                     error::NOERR
+    //                 },
+    //                 _ => {
+    //                     error::EIO
+    //                 }
+    //             }
+    //         },
+    //         1 => {
+    //             if !RUST_CDEV.is_null() {
+    //                 destroy_dev(RUST_CDEV);
+    //                 RUST_CDEV = ::core::ptr::null_mut();
+    //             }
+    //             uprintf(cstr!("Destroyed rust cdev\n"));
+    //             error::NOERR
+    //         },
+    //         _ => error::EOPNOTSUPP
+    //     }
+    // }
+
+
+    0
 }
 
 

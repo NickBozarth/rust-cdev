@@ -17,6 +17,7 @@ use crate::{
     c_templates::{mtx_init, mtx_destroy, mtx_lock, mtx_unlock, mtx_initialized}
 };
 
+#[derive(Debug)]
 pub enum MutexError {
     AlreadyInitialized,
     Uninitialized,

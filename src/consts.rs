@@ -384,3 +384,18 @@ pub mod mutex {
         pub const FLAGMASK: c_int   = RECURSED | CONTESTED | DESTROYED;
     }
 }
+
+pub mod modeventtype {
+    /*
+     * <sys/module.h>
+     * ALL REFERENCES TO THESE IN C DOCUMENTATION REFER TO VARIANTS IN enum modeventtype
+     * ALL REFERENCES TO THESE IN C DOCUMENTATION REFER TO THEM WITH A MOD_ PREFIX
+     * ex: modeventtype::LOAD -> MOD_LOAD in docs
+     */
+    use ::core::ffi::c_int;
+
+    pub const LOAD: c_int       = 0;
+    pub const UNLOAD: c_int     = 1;
+    pub const SHUTDOWN: c_int   = 2;
+    pub const QUIESCE: c_int    = 3;
+}

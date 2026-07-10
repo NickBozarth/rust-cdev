@@ -82,5 +82,3 @@ impl Cdevsw {
     pub const fn with_spare1(mut self, spare: [i32; 3]) -> Self             { self.d_spare1 = spare;                self }
     pub const fn with_spare2(mut self, spare: [*mut c_void; 3]) -> Self     { self.d_spare2 = spare;                self }
 }
-
-unsafe impl Send for Cdevsw {}
