@@ -1,5 +1,9 @@
 #![no_std]
 
+#[cfg(target_arch = "aarch64")]
+::core::arch::global_asm!(include_str!("bti_aarch64.s"));
+
+
 use core::{cell::OnceCell, ffi::c_char};
 use ::core::{
     ffi::{c_int, c_void},
@@ -7,7 +11,6 @@ use ::core::{
 };
 
 
-pub mod bti_note;
 
 pub mod types;
 use types::c_structs::*;
@@ -22,6 +25,9 @@ pub mod c_templates;
 use c_templates::*;
 
 pub mod mutex;
+
+
+
 
 
 #[macro_export]
@@ -41,11 +47,11 @@ macro_rules! cstr_raw {
 
 
 unsafe extern "Rust" {
-    pub fn init_dev(
-        cdevsw: &mut Cdevsw, 
-        make_dev_args: &mut MakeDevArgs, 
-        fmt: &mut *const c_char
-    );
+    // pub fn init_dev(
+    //     cdevsw: &mut Cdevsw, 
+    //     make_dev_args: &mut MakeDevArgs, 
+    //     fmt: &mut *const c_char
+    // );
 }
 
 static mut CDEV: *mut Cdev = ::core::ptr::null_mut();
@@ -65,7 +71,7 @@ pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: 
             let mut fmt: *const c_char =            ::core::ptr::null();
             make_dev_args.mda_devsw =               &raw mut cdevsw;
 
-            unsafe { init_dev(&mut cdevsw, &mut make_dev_args, &mut fmt); }
+            // unsafe { init_dev(&mut cdevsw, &mut make_dev_args, &mut fmt); }
 
             if cdevsw.d_name.is_null() {
                 uprintf!(cstr!("Cdev modevent error: Cdevsw.d_name must not be null\n"));
