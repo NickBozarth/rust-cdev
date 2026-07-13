@@ -46,11 +46,11 @@ macro_rules! cstr_raw {
 
 
 unsafe extern "Rust" {
-    // pub fn init_dev(
-    //     cdevsw: &mut Cdevsw, 
-    //     make_dev_args: &mut MakeDevArgs, 
-    //     fmt: &mut *const c_char
-    // );
+    pub fn init_dev(
+        cdevsw: &mut Cdevsw, 
+        make_dev_args: &mut MakeDevArgs, 
+        fmt: &mut *const c_char
+    );
 }
 
 static mut CDEV: *mut Cdev = ::core::ptr::null_mut();
@@ -67,10 +67,10 @@ pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: 
 
             let mut cdevsw: Cdevsw =                Cdevsw::new(::core::ptr::null());
             let mut make_dev_args: MakeDevArgs =    MakeDevArgs::default();
-            let mut fmt: *const c_char =            ::core::ptr::null();
+            let mut fmt: *const c_char =            cstr!("%s");
             make_dev_args.mda_devsw =               &raw mut cdevsw;
 
-            // unsafe { init_dev(&mut cdevsw, &mut make_dev_args, &mut fmt); }
+            unsafe { init_dev(&mut cdevsw, &mut make_dev_args, &mut fmt); }
 
             if cdevsw.d_name.is_null() {
                 uprintf!(cstr!("Cdev modevent error: Cdevsw.d_name must not be null\n"));
@@ -78,14 +78,15 @@ pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: 
             }
 
             let error: c_int;
+            error = 0;
             let mut cdev_attempt: *mut Cdev = ::core::ptr::null_mut();
-            unsafe {
-                error = make_dev_s(
-                    &raw mut make_dev_args,
-                    &raw mut cdev_attempt,
-                    fmt,
-                );
-            }
+            // unsafe {
+            //     error = make_dev_s(
+            //         &raw mut make_dev_args,
+            //         &raw mut cdev_attempt,
+            //         fmt,
+            //     );
+            // }
 
             match error {
                 0 => {
@@ -101,7 +102,10 @@ pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: 
        modeventtype::UNLOAD => {
             unsafe {
                 match CDEV.is_null() {
-                    true  => error::EIO,
+                    true  => {
+                        uprintf(cstr!("Cdev modevent: no device to unload\n"));
+                        error::EIO
+                    },
                     false => {
                         destroy_dev(CDEV);
                         uprintf(cstr!("Cdev modevent: destroyed dev\n"));
@@ -111,7 +115,7 @@ pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: 
             }
        },
        _ => {
-            uprintf!(cstr!("Cdev modevent error: Event not defined\n"));
+            uprintf!(cstr!("Cdev modevent error: Event not defined with type %i\n"), event);
             error::ENOTSUP
        }
     };
