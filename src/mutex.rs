@@ -152,3 +152,11 @@ impl<T> Mutex<T> {
 
 unsafe impl<T: Send> Sync for Mutex<T> {}
 unsafe impl<T: Send> Send for Mutex<T> {}
+
+impl<T> Drop for Mutex<T> {
+    fn drop(&mut self) {
+        if self.is_initialized() {
+            unsafe { mtx_destroy(self.c_mutex.get()); }
+        }
+    }
+}

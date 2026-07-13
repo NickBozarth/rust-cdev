@@ -4,9 +4,8 @@
 ::core::arch::global_asm!(include_str!("bti_aarch64.s"));
 
 
-use core::{cell::OnceCell, ffi::c_char};
 use ::core::{
-    ffi::{c_int, c_void},
+    ffi::{c_int, c_void, c_char},
     panic::PanicInfo
 };
 

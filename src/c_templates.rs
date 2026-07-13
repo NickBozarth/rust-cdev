@@ -16,18 +16,6 @@ unsafe extern "C" {
     /*
      * Device interaction
      */
-    pub(crate) fn make_dev_p(
-        _flags: c_int,
-        _cdev: *mut *mut Cdev,
-        _devsw: *mut Cdevsw,
-        _cr: *mut Ucred,
-        _uid: c_uid_t,
-        _gid: c_gid_t,
-        _mode: c_int,
-        _fmt: *const c_char,
-        ...
-    ) -> c_int;
-
     pub(crate) fn make_dev_s(
         _args: *mut MakeDevArgs,
         _cdev: *mut *mut Cdev,
