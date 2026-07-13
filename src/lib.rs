@@ -78,15 +78,14 @@ pub extern "C" fn  rust_cdev_modevent(_module: *mut c_void, event: c_int, _arg: 
             }
 
             let error: c_int;
-            error = 0;
-            let mut cdev_attempt: *mut Cdev = ::core::ptr::null_mut();
-            // unsafe {
-            //     error = make_dev_s(
-            //         &raw mut make_dev_args,
-            //         &raw mut cdev_attempt,
-            //         fmt,
-            //     );
-            // }
+            unsafe {
+                error = make_dev_s(
+                    &raw mut make_dev_args,
+                    &raw mut CDEV,
+                    fmt,
+                    cdevsw.d_name
+                );
+            }
 
             match error {
                 0 => {

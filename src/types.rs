@@ -30,7 +30,7 @@ pub mod c_types {
 pub mod c_structs {
     use ::core::ffi::{c_int, c_char, c_uint, c_void};
     use super::c_types::{c_size_t, c___uintptr_t};
-    use crate::{cdev::Cdevsw, consts::{gid, uid}, types::c_types::{c_gid_t, c_uid_t}};
+    use crate::{c_templates::make_dev_args_init_impl, cdev::Cdevsw, types::c_types::{c_gid_t, c_uid_t}};
 
     #[repr(C)]
     pub struct MakeDevArgs {
@@ -48,19 +48,17 @@ pub mod c_structs {
 
 
     impl MakeDevArgs {
-        pub const fn default() -> Self {
-            Self {
-                mda_size:       size_of::<Self>(),
-                mda_flags:      0,
-                mda_devsw:      ::core::ptr::null_mut(),
-                mda_cr:         ::core::ptr::null_mut(),
-                mda_uid:        uid::ROOT,
-                mda_gid:        gid::WHEEL,
-                mda_mode:       0,
-                mda_uint:       0,
-                mda_si_drv1:    ::core::ptr::null_mut(),
-                mda_si_drv2:    ::core::ptr::null_mut(),
-            }
+        pub fn default() -> Self {
+            /*
+             * All args are safe to be zeroed before initialization
+             */
+            let mut args: Self;
+            unsafe { 
+                args = ::core::mem::zeroed();
+                make_dev_args_init_impl(&raw mut args, ::core::mem::size_of::<Self>());
+            };
+
+            args
         }
     }
 
