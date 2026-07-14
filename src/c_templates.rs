@@ -1,8 +1,8 @@
+use core::ffi::c_void;
 use ::core::ffi::{c_int, c_char};
 use crate::types::{
-    c_structs::{Cdev, MakeDevArgs, Mtx, Ucred}, c_types::{c_gid_t, c_size_t, c_uid_t}
+    c_structs::{Cdev, MakeDevArgs, Mtx, Uio}, c_types::c_size_t
 };
-use crate::cdev::Cdevsw;
 
 
 /*
@@ -16,9 +16,16 @@ use crate::cdev::Cdevsw;
  */
 unsafe extern "C" {
     /*
-     * Userspace interaction
+     * Messaging
      */
     pub fn uprintf(fmt: *const c_char, ...) -> c_int;
+
+
+    /*
+     * UIO funcs
+     * all struct uio * are represented as *mut c_void
+     */
+    pub fn uiomove(cp: *mut c_void, n: c_int, uio: *mut Uio) -> c_int;
 
 
     /*

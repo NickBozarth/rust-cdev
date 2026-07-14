@@ -107,6 +107,7 @@ pub mod error {
      * *note* NOERR is not contained in original definitions
      */
     use ::core::ffi::c_int;
+    pub type Errno = c_int;
 
     pub const NOERR: c_int            = 0;
     pub const EPERM: c_int            = 1;
