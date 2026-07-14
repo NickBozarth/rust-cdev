@@ -1,13 +1,24 @@
+
+
+
+
+
+/*
+ * The primary purpose of these is to match the exact signature of
+ *  the original c functions
+ */
 #[allow(non_camel_case_types)]
 pub mod c_types {
     use ::core::ffi::c_char;
 
-    pub type c_size_t = usize;
-    pub type c_uid_t = u32;
-    pub type c_gid_t = u32;
-    pub type c_caddr_t = *mut c_char;
+    pub type c_size_t       = usize;
+    pub type c_ssize_t      = isize;
+    pub type c_uid_t        = u32;
+    pub type c_gid_t        = u32;
+    pub type c_caddr_t      = *mut c_char;
     pub type c_vm_ooffset_t = u64;
     pub type c_vm_memattr_t = c_char;
+    pub type c_off_t        = u64;
 
     #[cfg(target_pointer_width = "64")]
     pub type c_vm_paddr_t = u64;
@@ -28,9 +39,10 @@ pub mod c_types {
 
 
 pub mod c_structs {
-    use ::core::ffi::{c_int, c_char, c_uint, c_void};
+use ::core::ffi::{c_int, c_char, c_uint, c_void};
+use core::{cmp::min, marker::PhantomData};
     use super::c_types::{c_size_t, c___uintptr_t};
-    use crate::{c_templates::make_dev_args_init_impl, cdev::Cdevsw, types::c_types::{c_gid_t, c_uid_t}};
+    use crate::{c_templates::{make_dev_args_init_impl, uiomove}, cdev::Cdevsw, consts::error::Errno, types::c_types::{c_gid_t, c_off_t, c_ssize_t, c_uid_t}};
 
     #[repr(C)]
     pub struct MakeDevArgs {
@@ -66,6 +78,7 @@ pub mod c_structs {
     /*
      * These are to be used internally for pub Mutex type and extern C functions
      */
+    /* <sys/_lock.h> */
     #[repr(C)]
     struct LockObject {
         pub lo_name:    *const c_char,
@@ -83,6 +96,8 @@ pub mod c_structs {
             }
         }
     }
+
+    /* <sys/_mutex.h> */
     #[repr(C)]
     pub(crate) struct Mtx {
         lock_object:    LockObject,
@@ -98,6 +113,21 @@ pub mod c_structs {
     }
 
 
+    /* <sys/uio.h> */
+    
+    #[repr(C)]
+    pub struct Uio {
+        uio_iov:    *mut Iovec,
+        uio_iovcnt: c_int,
+        uio_offset: c_off_t,
+        uio_resid:  c_ssize_t,
+        uio_segflg: UioSeg,
+        uio_rw:     UioRw,
+        uio_td:     *mut Thread,
+    }
+    
+
+
     /*
      * These should never be instantiated on by driver,
      *  they must be passed as an argument from an extern
@@ -107,8 +137,6 @@ pub mod c_structs {
     pub struct Cdev     { _private: [u8; 0] }
     #[repr(C)]
     pub struct Thread   { _private: [u8; 0] }
-    #[repr(C)]
-    pub struct Uio      { _private: [u8; 0] }
     #[repr(C)]
     pub struct Ucred    { _private: [u8; 0] }
     #[repr(C)]
@@ -121,13 +149,28 @@ pub mod c_structs {
     pub struct VmObject { _private: [u8; 0] }
     #[repr(C)]
     struct Witness      { _private: [u8; 0] }
+    #[repr(C)]
+    struct Iovec        { _private: [u8; 0] }
 
-    
+
+    /* <sys/_uio.h> */
+    #[repr(C)]
+    enum UioSeg {
+        USERSPACE,
+        SYSSPACE,
+        NOCOPY
+    }
+    #[repr(C)]
+    enum UioRw {
+        READ,
+        WRITE
+    }
 }
 
 pub mod d_functions {
     use ::core::ffi::{c_int, c_ulong};
-    use super::{
+
+use super::{
         c_structs::{Cdev, Thread, Uio, Knote, CFile, VmObject, Bio},
         c_types::{c_caddr_t, c_vm_ooffset_t, c_vm_paddr_t, c_vm_memattr_t, c_vm_size_t}
     };
@@ -135,8 +178,8 @@ pub mod d_functions {
     pub type DOpenT         = unsafe extern "C" fn(dev: *mut Cdev, oflags: c_int, devtype: c_int, td: *mut Thread) -> c_int;
     pub type DFdopenT       = unsafe extern "C" fn(dev: *mut Cdev, oflags: c_int, td: *mut Thread, fp: *mut CFile) -> c_int;
     pub type DCloseT        = unsafe extern "C" fn(dev: *mut Cdev, fflag: c_int, devtype: c_int, td: *mut Thread) -> c_int;
-    pub type DReadT         = unsafe extern "C" fn(dev: *mut Cdev, uio: *mut Uio, ioflag: c_int) -> c_int;
-    pub type DWriteT        = unsafe extern "C" fn(dev: *mut Cdev, uio: *mut Uio, ioflag: c_int) -> c_int;
+    pub type DReadT         = unsafe extern "C" fn(dev: *mut Cdev, uio: *mut Uio::<UioRead>, ioflag: c_int) -> c_int;
+    pub type DWriteT        = unsafe extern "C" fn(dev: *mut Cdev, uio: *mut Uio::<UioWrite>, ioflag: c_int) -> c_int;
     pub type DIoctlT        = unsafe extern "C" fn(dev: *mut Cdev, cmd: c_ulong, data: c_caddr_t, fflag: c_int, td: *mut Thread) -> c_int;
     pub type DPollT         = unsafe extern "C" fn(dev: *mut Cdev, events: c_int, td: *mut Thread) -> c_int;
     pub type DMmapT         = unsafe extern "C" fn(dev: *mut Cdev, offset: c_vm_ooffset_t, paddr: *mut c_vm_paddr_t, nprot: c_int, memattr: *mut c_vm_memattr_t) -> c_int;
@@ -144,4 +187,58 @@ pub mod d_functions {
     pub type DKqfilterT     = unsafe extern "C" fn(dev: *mut Cdev, kn: *mut Knote) -> c_int;
     pub type DPurgeT        = unsafe extern "C" fn(dev: *mut Cdev) -> c_int;
     pub type DMmapSingleT   = unsafe extern "C" fn(cdev: *mut Cdev, offset: *mut c_vm_ooffset_t, size: c_vm_size_t, object: *mut *mut VmObject, nprot: c_int) -> c_int;
+}
+
+
+pub mod uio {
+    pub trait UioDirection {}
+    pub struct UioRead;
+    pub struct UioWrite;
+    impl UioDirection for UioRead  {}
+    impl UioDirection for UioWrite {}
+    pub struct UioView {
+        ptr: Uio
+    }
+
+
+    impl<Direction: UioDirection> Uio<Direction> {
+        fn uiomove_buf(&mut self, buffer: &[u8]) -> Result<c_ssize_t, Errno> {
+            let cp = buffer.as_ptr() as *mut c_void;
+            let n = buffer.len() as c_int;
+            let uio = self
+                as *mut Uio<Direction>
+                as *mut c_void;
+            let error: c_int;
+            let bytes_processed = min(
+                self.uio_resid, 
+                buffer.len() as c_ssize_t
+            );
+
+            unsafe { error = uiomove(cp, n, uio); }
+            match error {
+                0 => Ok(bytes_processed),
+                e => Err(e)
+            }
+        }
+    }
+
+
+
+    impl Uio<UioRead> {
+        pub fn kernel_to_user_buf(
+            &mut self, 
+            buffer: &[u8]
+        ) -> Result<c_ssize_t, Errno> {
+            self.uiomove_buf(buffer)
+        }
+    }
+
+    impl Uio<UioWrite> {
+        pub fn user_to_kernel_buf(
+            &mut self, 
+            buffer: &[u8]
+        ) -> Result<c_ssize_t, Errno> {
+            self.uiomove_buf(buffer)
+        }
+    }
 }
